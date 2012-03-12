@@ -1,0 +1,32 @@
+name:           vector-th-unbox
+version:        0.1.0.0
+synopsis:       Deriver for unboxed vectors using Template Haskell
+description:
+    A Template Haskell deriver for unboxed vectors, given a pair of coercion
+    functions to and from some existing type with an Unbox instance.
+    .
+    Refer to "Data.Vector.Unboxed.Deriving" for documentation and examples.
+stability:      experimental
+license:        BSD3
+license-file:   LICENSE
+author:         Liyang HU
+maintainer:     vector-th-unbox@liyang.hu
+category:       Data
+build-type:     Simple
+cabal-version:  >= 1.6
+
+source-repository head
+    type:       git
+    location:   http://github.com/liyang/vector-th-unbox
+
+library
+    exposed-modules:
+        Data.Vector.Unboxed.Deriving
+
+    build-depends:
+        base >= 4.3 && < 5,
+        template-haskell >= 2.5,
+        vector >= 0.7
+
+-- vim: et sw=4 ts=4 sts=4:
+
