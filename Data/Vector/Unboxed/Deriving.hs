@@ -12,10 +12,10 @@ Maintainer:  vector-th-unbox@liyang.hu
 Stability:   experimental
 Portability: non-portable
 
-Writing Unbox instances for new data types is tedious and formulaic. More
+Writing @Unbox@ instances for new data types is tedious and formulaic. More
 often than not, there is a straightforward mapping of the new type onto some
-existing one already imbued with an Unbox instance. The example from the
-vector package represents @Complex a@ as pairs @(a, a)@. (See
+existing one already imbued with an @Unbox@ instance. The example from the
+@vector@ package represents @Complex a@ as pairs @(a, a)@. (See
 <http://hackage.haskell.org/packages/archive/vector/latest/doc/html/Data-Vector-Unboxed.html>.)
 Using 'derivingUnbox', we can define the same instances much more
 succinctly:
@@ -26,10 +26,7 @@ succinctly:
 >    [| \ (r, i) -> r :+ i |]
 
 Requires the @MultiParamTypeClasses@, @TemplateHaskell@ and @TypeFamilies@
-LANGUAGE extensions.
-
-The dummy 'Unbox'' class provides a convenient way to pass in the source
-and representation types, along with any requisite constraints.
+@LANGUAGE@ extensions.
 
 -}
 
@@ -45,16 +42,19 @@ import qualified Data.Vector.Generic.Mutable as M
 import Data.Vector.Unboxed.Base (MVector (..), Vector (..), Unbox)
 import Language.Haskell.TH
 
--- | A dummy class for passing arguments to 'derivingUnbox'.
+-- | A dummy class providing a convenient way to pass in the source and
+-- representation types, along with any requisite constraints and (implicit)
+-- type variable introductions.
 class Unbox' src rep
 
--- Create a Pat bound to the given name and an Exp for said binding.
+-- Create a @Pat@ bound to the given name and an @Exp@ for said binding.
 newPatExp :: String -> Q (Pat, Exp)
 newPatExp = fmap (VarP &&& VarE) . newName
 
 -- Create a wrapper for the given function with the same 'nameBase', given
 -- a list of argument bindings and expressions in terms of said bindings.
--- Complimentary INLINE pragma included.
+-- A final coercion (@Exp -> Exp@) is applied to the body of the function.
+-- Complimentary @INLINE@ pragma included.
 wrap :: Name -> [(Pat, Exp)] -> (Exp -> Exp) -> [Dec]
 wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
     base = mkName (nameBase fun)
@@ -65,7 +65,7 @@ wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
 {-| Let's consider a more complex example: suppose we want an @Unbox@
 instance for @Maybe a@. We can encode this using the pair @(Bool, a)@, with
 the boolean indicating whether we have @Nothing@ or @Just@ something. This
-encoding requires a dummy value in the Nothing case, necessitating an
+encoding requires a dummy value in the @Nothing@ case, necessitating an
 additional @Default@ (see the @data-default@ package) constraint. Thus:
 
 >derivingUnbox "Maybe"
