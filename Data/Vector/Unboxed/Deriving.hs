@@ -59,7 +59,7 @@ newPatExp = fmap (VarP &&& VarE) . newName
 wrap :: Name -> [(Pat, Exp)] -> (Exp -> Exp) -> [Dec]
 wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
     base = mkName (nameBase fun)
-    inline = PragmaD (InlineP base (InlineSpec True False Nothing))
+    inline = PragmaD (InlineP base Inline FunLike AllPhases)
     body = coerce $ foldl AppE (VarE fun) exps
     method = FunD base [Clause pats (NormalB body) []]
 
