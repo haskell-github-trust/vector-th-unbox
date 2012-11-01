@@ -1,6 +1,9 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TemplateHaskell #-}
+#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
+#endif
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS -Wall #-}
@@ -59,7 +62,11 @@ newPatExp = fmap (VarP &&& VarE) . newName
 wrap :: Name -> [(Pat, Exp)] -> (Exp -> Exp) -> [Dec]
 wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
     base = mkName (nameBase fun)
+#if MIN_VERSION_template_haskell(2,8,0)
     inline = PragmaD (InlineP base Inline FunLike AllPhases)
+#else
+    inline = PragmaD (InlineP base (InlineSpec True False Nothing))
+#endif
     body = coerce $ foldl AppE (VarE fun) exps
     method = FunD base [Clause pats (NormalB body) []]
 
