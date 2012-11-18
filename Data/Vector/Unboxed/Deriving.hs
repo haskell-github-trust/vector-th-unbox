@@ -54,14 +54,14 @@ newPatExp = fmap (VarP &&& VarE) . newName
 -- Complimentary @INLINE@ pragma included.
 wrap :: Name -> [(Pat, Exp)] -> (Exp -> Exp) -> [Dec]
 wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
-    base = mkName (nameBase fun)
 #if MIN_VERSION_template_haskell(2,8,0)
-    inline = PragmaD (InlineP base Inline FunLike AllPhases)
+    inline = PragmaD (InlineP fun Inline FunLike AllPhases)
 #else
-    inline = PragmaD (InlineP base (InlineSpec True False Nothing))
+    inline = PragmaD ( InlineP (mkName (nameBase fun))
+        (InlineSpec True False Nothing) )
 #endif
     body = coerce $ foldl AppE (VarE fun) exps
-    method = FunD base [Clause pats (NormalB body) []]
+    method = FunD fun [Clause pats (NormalB body) []]
 
 {-| Let's consider a more complex example: suppose we want an @Unbox@
 instance for @Maybe a@. We can encode this using the pair @(Bool, a)@, with
