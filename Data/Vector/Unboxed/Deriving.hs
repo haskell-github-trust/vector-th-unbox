@@ -25,18 +25,16 @@ Using 'derivingUnbox', we can define the same instances much more
 succinctly:
 
 >derivingUnbox "Complex"
->    [d| instance (Unbox a) => Unbox' (Complex a) (a, a) |]
->    [| \ (r :+ i) -> (r, i) |]
->    [| \ (r, i) -> r :+ i |]
+>    [d| (Unbox a) ⇒ Complex a → (a, a) |]
+>    [| \ (r :+ i) → (r, i) |]
+>    [| \ (r, i) → r :+ i |]
 
-Requires the @MultiParamTypeClasses@, @TemplateHaskell@ and @TypeFamilies@
-@LANGUAGE@ extensions.
+Requires the @MultiParamTypeClasses@, @TemplateHaskell@, @TypeFamilies@ and
+probably the @FlexibleInstances@ @LANGUAGE@ extensions.
 
 -}
 
-module Data.Vector.Unboxed.Deriving
-    ( Unbox', derivingUnbox
-    ) where
+module Data.Vector.Unboxed.Deriving (derivingUnbox) where
 
 import Control.Arrow
 import Control.Applicative
@@ -46,18 +44,13 @@ import qualified Data.Vector.Generic.Mutable as M
 import Data.Vector.Unboxed.Base (MVector (..), Vector (..), Unbox)
 import Language.Haskell.TH
 
--- | A dummy class providing a convenient way to pass in the source and
--- representation types, along with any requisite constraints and (implicit)
--- type variable introductions.
-class Unbox' src rep
-
 -- Create a @Pat@ bound to the given name and an @Exp@ for said binding.
 newPatExp :: String -> Q (Pat, Exp)
 newPatExp = fmap (VarP &&& VarE) . newName
 
 -- Create a wrapper for the given function with the same 'nameBase', given
 -- a list of argument bindings and expressions in terms of said bindings.
--- A final coercion (@Exp -> Exp@) is applied to the body of the function.
+-- A final coercion (@Exp → Exp@) is applied to the body of the function.
 -- Complimentary @INLINE@ pragma included.
 wrap :: Name -> [(Pat, Exp)] -> (Exp -> Exp) -> [Dec]
 wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
@@ -77,24 +70,26 @@ encoding requires a dummy value in the @Nothing@ case, necessitating an
 additional @Default@ (see the @data-default@ package) constraint. Thus:
 
 >derivingUnbox "Maybe"
->    [d| instance (Default a, Unbox a) => Unbox' (Maybe a) (Bool, a) |]
->    [| maybe (False, def) (\ x -> (True, x)) |]
->    [| \ (b, x) -> if b then Just x else Nothing |]
+>    [d| (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
+>    [| maybe (False, def) (\ x → (True, x)) |]
+>    [| \ (b, x) → if b then Just x else Nothing |]
 -}
 derivingUnbox
     :: String   -- ^ Unique constructor suffix for the MVector and Vector data families
-    -> DecsQ    -- ^ Quotation of the form @[d| instance /ctxt/ => Unbox' src rep |]@
-    -> ExpQ     -- ^ Quotation of an expression of type @src -> rep@
-    -> ExpQ     -- ^ Quotation of an expression of type @rep -> src@
+    -> TypeQ    -- ^ Quotation of the form @[t| /ctxt/ ⇒ src → rep |]@
+    -> ExpQ     -- ^ Quotation of an expression of type @src → rep@
+    -> ExpQ     -- ^ Quotation of an expression of type @rep → src@
     -> DecsQ    -- ^ Declarations to be spliced for the derived Unbox instance
 derivingUnbox name argsQ toRepQ fromRepQ = do
     let mvName = mkName ("MV_" ++ name)
     let vName  = mkName ("V_" ++ name)
     toRep <- toRepQ
     fromRep <- fromRepQ
-    -- fail unless argsQ quotes a single Unbox' instance
-    [ InstanceD cxts (ConT (nameBase -> "Unbox'")
-        `AppT` typ `AppT` rep) [] ] <- argsQ
+    args <- argsQ
+    (cxts, typ, rep) <- case args of
+        ForallT _ cxts (ArrowT `AppT` typ `AppT` rep) -> return (cxts, typ, rep)
+        ArrowT `AppT` typ `AppT` rep -> return ([], typ, rep)
+        _ -> fail "Expecting a type of the form: cxts => typ -> rep"
 
     let liftE e = InfixE (Just e) (VarE 'liftM) . Just
     let mvCon = ConE mvName
