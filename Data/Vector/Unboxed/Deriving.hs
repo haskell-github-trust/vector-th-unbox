@@ -25,12 +25,16 @@ Using 'derivingUnbox', we can define the same instances much more
 succinctly:
 
 >derivingUnbox "Complex"
->    [d| (Unbox a) ⇒ Complex a → (a, a) |]
+>    [t| (Unbox a) ⇒ Complex a → (a, a) |]
 >    [| \ (r :+ i) → (r, i) |]
 >    [| \ (r, i) → r :+ i |]
 
 Requires the @MultiParamTypeClasses@, @TemplateHaskell@, @TypeFamilies@ and
-probably the @FlexibleInstances@ @LANGUAGE@ extensions.
+probably the @FlexibleInstances@ @LANGUAGE@ extensions. Older versions of
+GHC needs the 'G.Vector' and 'M.MVector' class method names in scope:
+
+>import qualified Data.Vector.Generic
+>import qualified Data.Vector.Generic.Mutable
 
 -}
 
@@ -70,7 +74,7 @@ encoding requires a dummy value in the @Nothing@ case, necessitating an
 additional @Default@ (see the @data-default@ package) constraint. Thus:
 
 >derivingUnbox "Maybe"
->    [d| (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
+>    [t| (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
 >    [| maybe (False, def) (\ x → (True, x)) |]
 >    [| \ (b, x) → if b then Just x else Nothing |]
 -}
