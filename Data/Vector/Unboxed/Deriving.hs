@@ -52,20 +52,24 @@ import Language.Haskell.TH
 newPatExp :: String -> Q (Pat, Exp)
 newPatExp = fmap (VarP &&& VarE) . newName
 
+-- Turn any 'Name' into a capturable one.
+capture :: Name -> Name
+capture = mkName . nameBase
+
 -- Create a wrapper for the given function with the same 'nameBase', given
 -- a list of argument bindings and expressions in terms of said bindings.
 -- A final coercion (@Exp → Exp@) is applied to the body of the function.
 -- Complimentary @INLINE@ pragma included.
 wrap :: Name -> [(Pat, Exp)] -> (Exp -> Exp) -> [Dec]
 wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
+    name = capture fun
 #if MIN_VERSION_template_haskell(2,8,0)
-    inline = PragmaD (InlineP fun Inline FunLike AllPhases)
+    inline = PragmaD (InlineP name Inline FunLike AllPhases)
 #else
-    inline = PragmaD ( InlineP (mkName (nameBase fun))
-        (InlineSpec True False Nothing) )
+    inline = PragmaD ( InlineP name (InlineSpec True False Nothing) )
 #endif
     body = coerce $ foldl AppE (VarE fun) exps
-    method = FunD fun [Clause pats (NormalB body) []]
+    method = FunD name [Clause pats (NormalB body) []]
 
 {-| Let's consider a more complex example: suppose we want an @Unbox@
 instance for @Maybe a@. We can encode this using the pair @(Bool, a)@, with
