@@ -18,11 +18,10 @@ Portability: non-portable
 
 Writing @Unbox@ instances for new data types is tedious and formulaic. More
 often than not, there is a straightforward mapping of the new type onto some
-existing one already imbued with an @Unbox@ instance. The example from the
-@vector@ package represents @Complex a@ as pairs @(a, a)@. (See
-<http://hackage.haskell.org/packages/archive/vector/latest/doc/html/Data-Vector-Unboxed.html>.)
-Using 'derivingUnbox', we can define the same instances much more
-succinctly:
+existing one already imbued with an @Unbox@ instance. The
+<http://hackage.haskell.org/package/vector/docs/Data-Vector-Unboxed.html example>
+from the @vector@ package represents @Complex a@ as pairs @(a, a)@. Using
+'derivingUnbox', we can define the same instances much more succinctly:
 
 >derivingUnbox "Complex"
 >    [t| (Unbox a) ⇒ Complex a → (a, a) |]
@@ -30,12 +29,14 @@ succinctly:
 >    [| \ (r, i) → r :+ i |]
 
 Requires the @MultiParamTypeClasses@, @TemplateHaskell@, @TypeFamilies@ and
-probably the @FlexibleInstances@ @LANGUAGE@ extensions. Older versions of
-GHC needs the 'G.Vector' and 'M.MVector' class method names in scope:
+probably the @FlexibleInstances@ @LANGUAGE@ extensions. GHC needs the
+'G.Vector' and 'M.MVector' class method names to be in scope:
 
 >import qualified Data.Vector.Generic
 >import qualified Data.Vector.Generic.Mutable
 
+Consult the <https://github.com/liyang/vector-th-unbox/blob/master/tests/sanity.hs sanity test>
+for a working example.
 -}
 
 module Data.Vector.Unboxed.Deriving (derivingUnbox) where
@@ -72,10 +73,11 @@ wrap fun (unzip -> (pats, exps)) coerce = [inline, method] where
     method = FunD name [Clause pats (NormalB body) []]
 
 {-| Let's consider a more complex example: suppose we want an @Unbox@
-instance for @Maybe a@. We can encode this using the pair @(Bool, a)@, with
-the boolean indicating whether we have @Nothing@ or @Just@ something. This
-encoding requires a dummy value in the @Nothing@ case, necessitating an
-additional @Default@ (see the @data-default@ package) constraint. Thus:
+instance for @Maybe a@. We could encode this using the pair @(Bool, a)@,
+with the boolean indicating whether we have @Nothing@ or @Just@ something.
+This encoding requires a dummy value in the @Nothing@ case, necessitating an
+additional <http://hackage.haskell.org/package/data-default/docs/Data-Default.html#t:Default Default>
+constraint. Thus:
 
 >derivingUnbox "Maybe"
 >    [t| (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
