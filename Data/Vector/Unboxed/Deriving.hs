@@ -57,6 +57,9 @@ newPatExp = fmap (VarP &&& VarE) . newName
 capture :: Name -> Name
 capture = mkName . nameBase
 
+liftE :: Exp -> Exp -> Exp
+liftE e = InfixE (Just e) (VarE 'liftM) . Just
+
 -- Create a wrapper for the given function with the same 'nameBase', given
 -- a list of argument bindings and expressions in terms of said bindings.
 -- A final coercion (@Exp → Exp@) is applied to the body of the function.
@@ -101,7 +104,6 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
         ArrowT `AppT` typ `AppT` rep -> return ([], typ, rep)
         _ -> fail "Expecting a type of the form: cxts => typ -> rep"
 
-    let liftE e = InfixE (Just e) (VarE 'liftM) . Just
     let mvCon = ConE mvName
     let vCon  = ConE vName
     i <- newPatExp "idx"
