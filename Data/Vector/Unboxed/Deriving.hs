@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TemplateHaskell #-}
 #if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
@@ -49,9 +50,26 @@ import qualified Data.Vector.Generic.Mutable as M
 import Data.Vector.Unboxed.Base (MVector (..), Vector (..), Unbox)
 import Language.Haskell.TH
 
+consUnbox :: String -> (Name, Name)
+consUnbox name = (mkName $ "MV_" ++ name, mkName $ "V_" ++ name)
+
 -- Create a @Pat@ bound to the given name and an @Exp@ for said binding.
 newPatExp :: String -> Q (Pat, Exp)
 newPatExp = fmap (VarP &&& VarE) . newName
+
+data Common = Common
+    { mvName, vName :: Name
+    , i, n, mv, mv', v :: (Pat, Exp) }
+
+common :: String -> Q Common
+common name = do
+    let (mvName, vName) = consUnbox name
+    i <- newPatExp "idx"
+    n <- newPatExp "len"
+    mv  <- first (ConP mvName . (:[])) <$> newPatExp "mvec"
+    mv' <- first (ConP mvName . (:[])) <$> newPatExp "mvec'"
+    v   <- first (ConP vName  . (:[])) <$> newPatExp "vec"
+    return Common {..}
 
 -- Turn any 'Name' into a capturable one.
 capture :: Name -> Name
@@ -94,28 +112,20 @@ derivingUnbox
     -> ExpQ     -- ^ Quotation of an expression of type @rep → src@
     -> DecsQ    -- ^ Declarations to be spliced for the derived Unbox instance
 derivingUnbox name argsQ toRepQ fromRepQ = do
-    let mvName = mkName ("MV_" ++ name)
-    let vName  = mkName ("V_" ++ name)
+    Common {..} <- common name
     toRep <- toRepQ
     fromRep <- fromRepQ
+    a <- second (AppE toRep) <$> newPatExp "val"
     args <- argsQ
     (cxts, typ, rep) <- case args of
         ForallT _ cxts (ArrowT `AppT` typ `AppT` rep) -> return (cxts, typ, rep)
         ArrowT `AppT` typ `AppT` rep -> return ([], typ, rep)
         _ -> fail "Expecting a type of the form: cxts => typ -> rep"
 
-    let mvCon = ConE mvName
-    let vCon  = ConE vName
-    i <- newPatExp "idx"
-    n <- newPatExp "len"
-    a <- second (AppE toRep) <$> newPatExp "val"
-    mv  <- first (ConP mvName . (:[])) <$> newPatExp "mvec"
-    mv' <- first (ConP mvName . (:[])) <$> newPatExp "mvec'"
-    v   <- first (ConP vName  . (:[])) <$> newPatExp "vec"
-
     s <- VarT <$> newName "s"
     let newtypeMVector = NewtypeInstD [] ''MVector [s, typ]
             (NormalC mvName [(NotStrict, ConT ''MVector `AppT` s `AppT` rep)]) []
+    let mvCon = ConE mvName
     let instanceMVector = InstanceD cxts
             (ConT ''M.MVector `AppT` ConT ''MVector `AppT` typ) $ concat
             [ wrap 'M.basicLength           [mv]        id
@@ -133,6 +143,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
 
     let newtypeVector = NewtypeInstD [] ''Vector [typ]
             (NormalC vName [(NotStrict, ConT ''Vector `AppT` rep)]) []
+    let vCon  = ConE vName
     let instanceVector = InstanceD cxts
             (ConT ''G.Vector `AppT` ConT ''Vector `AppT` typ) $ concat
             [ wrap 'G.basicUnsafeFreeze     [mv]        (liftE vCon)
