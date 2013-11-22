@@ -10,7 +10,7 @@
 
 {-|
 Module:      Data.Vector.Unboxed.Deriving
-Copyright:   © Liyang HU 2012
+Copyright:   © 2012−2013 Liyang HU
 License:     BSD3
 Maintainer:  vector-th-unbox@liyang.hu
 Stability:   experimental
