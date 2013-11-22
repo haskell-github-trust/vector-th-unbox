@@ -43,7 +43,7 @@ Consult the <https://github.com/liyang/vector-th-unbox/blob/master/tests/sanity.
 for a working example.
 -}
 
-module Data.Vector.Unboxed.Deriving (derivingUnbox) where
+module Data.Vector.Unboxed.Deriving (derivingUnbox, newtypeUnboxCustom, derivingUnboxCustom) where
 
 import Control.Arrow
 import Control.Applicative
@@ -118,16 +118,109 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
     Common {..} <- common name
     toRep <- toRepQ
     fromRep <- fromRepQ
-    a <- second (AppE toRep) <$> newPatExp "val"
+    x <- second (AppE toRep) <$> newPatExp "val"
+
+    let customMV = concat
+            [ wrap 'M.basicUnsafeReplicate  [n, x]      (liftE $ ConE mvName)
+            , wrap 'M.basicUnsafeRead       [mv, i]     (liftE fromRep)
+            , wrap 'M.basicUnsafeWrite      [mv, i, x]  id
+            , wrap 'M.basicSet              [mv, x]     id ]
+    let customV = concat
+            [ wrap 'G.basicUnsafeIndexM     [v, i]      (liftE fromRep)
+            , wrap 'G.elemseq               [v, x]      id ]
+
+    (++) <$> newtypeUnboxCustom name argsQ
+        <*> derivingUnboxCustom name argsQ (return customMV) (return customV)
+
+-- When the user writes @[d| foo = bar |]@, TH creates a unique local name
+-- for 'foo' (with the @NameU@ @NameFlavour@; see source code for 'Name'.)
+-- Since we're expecting the user to give instance method declarations, we
+-- actually do want capturable names.
+captureDecs :: [Dec] -> [Dec]
+captureDecs = map $ \ d -> case d of
+    FunD name clauses -> FunD (capture name) clauses
+#if MIN_VERSION_template_haskell(2,8,0)
+    PragmaD (InlineP name il rm ph) -> PragmaD (InlineP (capture name) il rm ph)
+#else
+    PragmaD (InlineP name is) -> PragmaD (InlineP (capture name) is)
+#endif
+    _ -> d
+
+{-| If the 'Default' constraint or the overhead in the 'Nothing' case is
+unacceptable, we can alternatively give only those methods that actually
+deal with values of the type that we are trying to 'Unbox'; those that don't
+are automatically generated as wrappers around the corresponding methods for
+the representation. Suppose now we want to 'Unbox' 'Either':
+
+>-- Must splice in newtypes before we can quote @MV_Either@ or @V_Either@.
+>newtypeUnboxCustom "Either"
+>    [t| (Unbox a, Unbox b) ⇒ Either a b → (Bool, a, b) |]
+>derivingUnboxCustom "Either"
+>    [t| (Unbox a, Unbox b) ⇒ Either a b → (Bool, a, b) |]
+>    [d|
+>        -- Default basicUnsafeReplicate calls basicSet; good enough.
+>        {-# INLINE basicUnsafeRead #-}
+>        basicUnsafeRead (MV_Either (MV_3 _n ve va vb)) i = do
+>            e <- M.basicUnsafeRead ve i
+>            case e of
+>                False -> Left `liftM` M.basicUnsafeRead va i
+>                True -> Right `liftM` M.basicUnsafeRead vb i
+>        {-# INLINE basicUnsafeWrite #-}
+>        basicUnsafeWrite (MV_Either (MV_3 _n ve va vb)) i = either
+>            (\ a -> M.basicUnsafeWrite ve i False >> M.basicUnsafeWrite va i a)
+>            (\ b -> M.basicUnsafeWrite ve i True  >> M.basicUnsafeWrite vb i b)
+>        {-# INLINE basicSet #-}
+>        basicSet (MV_Either (MV_3 _n ve va vb)) = either
+>            (\ a -> M.basicSet ve False >> M.basicSet va a)
+>            (\ b -> M.basicSet ve True  >> M.basicSet vb b)
+>    |] [d|
+>        {-# INLINE basicUnsafeIndexM #-}
+>        basicUnsafeIndexM (V_Either (V_3 _n ve va vb)) i = do
+>            e <- G.basicUnsafeIndexM ve i
+>            case e of
+>                False -> Left `liftM` G.basicUnsafeIndexM va i
+>                True -> Right `liftM` G.basicUnsafeIndexM vb i
+>        {-# INLINE elemseq #-}
+>        elemseq _ = either
+>            (G.elemseq (undefined :: VU.Vector a))
+>            (G.elemseq (undefined :: VU.Vector b))
+>    |]
+-}
+
+parseArgs :: TypeQ -> Q (Cxt, Type, Type)
+parseArgs argsQ = do
     args <- argsQ
-    (cxts, typ, rep) <- case args of
+    case args of
         ForallT _ cxts (ArrowT `AppT` typ `AppT` rep) -> return (cxts, typ, rep)
         ArrowT `AppT` typ `AppT` rep -> return ([], typ, rep)
         _ -> fail "Expecting a type of the form: cxts => typ -> rep"
 
+newtypeUnboxCustom :: String -> TypeQ -> DecsQ
+newtypeUnboxCustom name argsQ = do
+    let (mvName, vName) = consUnbox name
+    (_, typ, rep) <- parseArgs argsQ
     s <- VarT <$> newName "s"
     let newtypeMVector = NewtypeInstD [] ''MVector [s, typ]
             (NormalC mvName [(NotStrict, ConT ''MVector `AppT` s `AppT` rep)]) []
+    let newtypeVector = NewtypeInstD [] ''Vector [typ]
+            (NormalC vName [(NotStrict, ConT ''Vector `AppT` rep)]) []
+    return [newtypeMVector, newtypeVector]
+
+derivingUnboxCustom
+    :: String   -- ^ Unique constructor suffix for the MVector and Vector data families
+    -> TypeQ    -- ^ Quotation of the form @[t| /ctxt/ ⇒ src → rep |]@
+    -> DecsQ    -- ^ Custom 'M.MVector' instance methods:
+                -- 'M.basicUnsafeReplicate', 'M.basicUnsafeRead',
+                -- 'M.basicUnsafeWrite', and 'M.basicSet'
+    -> DecsQ    -- ^ Custom 'G.Vector' instance methods:
+                -- 'G.basicUnsafeIndexM' and 'G.elemseq'
+    -> DecsQ    -- ^ Declarations to be spliced for the derived Unbox instance
+derivingUnboxCustom name argsQ customMVQ customVQ = do
+    Common {..} <- common name
+    (cxts, typ, _rep) <- parseArgs argsQ
+    customMV <- captureDecs <$> customMVQ
+    customV <- captureDecs <$> customVQ
+
     let mvCon = ConE mvName
     let instanceMVector = InstanceD cxts
             (ConT ''M.MVector `AppT` ConT ''MVector `AppT` typ) $ concat
@@ -135,17 +228,12 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'M.basicUnsafeSlice      [i, n, mv]  (AppE mvCon)
             , wrap 'M.basicOverlaps         [mv, mv']   id
             , wrap 'M.basicUnsafeNew        [n]         (liftE mvCon)
-            , wrap 'M.basicUnsafeReplicate  [n, a]      (liftE mvCon)
-            , wrap 'M.basicUnsafeRead       [mv, i]     (liftE fromRep)
-            , wrap 'M.basicUnsafeWrite      [mv, i, a]  id
             , wrap 'M.basicClear            [mv]        id
-            , wrap 'M.basicSet              [mv, a]     id
             , wrap 'M.basicUnsafeCopy       [mv, mv']   id
             , wrap 'M.basicUnsafeMove       [mv, mv']   id
-            , wrap 'M.basicUnsafeGrow       [mv, n]     (liftE mvCon) ]
+            , wrap 'M.basicUnsafeGrow       [mv, n]     (liftE mvCon)
+            , customMV ]
 
-    let newtypeVector = NewtypeInstD [] ''Vector [typ]
-            (NormalC vName [(NotStrict, ConT ''Vector `AppT` rep)]) []
     let vCon  = ConE vName
     let instanceVector = InstanceD cxts
             (ConT ''G.Vector `AppT` ConT ''Vector `AppT` typ) $ concat
@@ -153,11 +241,9 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'G.basicUnsafeThaw       [v]         (liftE mvCon)
             , wrap 'G.basicLength           [v]         id
             , wrap 'G.basicUnsafeSlice      [i, n, v]   (AppE vCon)
-            , wrap 'G.basicUnsafeIndexM     [v, i]      (liftE fromRep)
             , wrap 'G.basicUnsafeCopy       [mv, v]     id
-            , wrap 'G.elemseq               [v, a]      id ]
+            , customV ]
 
-    return [ InstanceD cxts (ConT ''Unbox `AppT` typ) []
-        , newtypeMVector, instanceMVector
-        , newtypeVector, instanceVector ]
+    return [ instanceMVector, instanceVector
+        , InstanceD cxts (ConT ''Unbox `AppT` typ) [] ]
 
