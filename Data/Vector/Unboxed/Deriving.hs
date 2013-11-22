@@ -120,6 +120,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'M.basicClear            [mv]        id
             , wrap 'M.basicSet              [mv, a]     id
             , wrap 'M.basicUnsafeCopy       [mv, mv']   id
+            , wrap 'M.basicUnsafeMove       [mv, mv']   id
             , wrap 'M.basicUnsafeGrow       [mv, n]     (liftE mvCon) ]
 
     let newtypeVector = NewtypeInstD [] ''Vector [typ]
