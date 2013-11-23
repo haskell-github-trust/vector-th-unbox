@@ -1,4 +1,12 @@
 language: haskell
+
+before_install:
+  - ./.travis/cabal-install-deps $mode
+
 install:
-  - cabal update
-  - cabal install
+  - cabal configure $mode
+  - cabal build
+
+env:
+  - mode="-fWerror --enable-tests"
+
