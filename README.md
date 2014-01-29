@@ -1,1 +1,1 @@
-<http://hackage.haskell.org/packages/archive/vector-th-unbox/latest/doc/html/Data-Vector-Unboxed-Deriving.html>
+<http://hackage.haskell.org/package/vector-th-unbox/docs/Data-Vector-Unboxed-Deriving.html>
