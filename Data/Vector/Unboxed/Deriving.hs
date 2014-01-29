@@ -30,11 +30,14 @@ from the @vector@ package represents @Complex a@ as pairs @(a, a)@. Using
 >    [| \ (r, i) → r :+ i |]
 
 Requires the @MultiParamTypeClasses@, @TemplateHaskell@, @TypeFamilies@ and
-probably the @FlexibleInstances@ @LANGUAGE@ extensions. GHC needs the
-'G.Vector' and 'M.MVector' class method names to be in scope:
+probably the @FlexibleInstances@ @LANGUAGE@ extensions. Note that GHC 7.4
+(but not earlier nor later) needs the 'G.Vector' and 'M.MVector' class
+method names to be in scope in order to define the appropriate instances:
 
+>#if __GLASGOW_HASKELL == 704
 >import qualified Data.Vector.Generic
 >import qualified Data.Vector.Generic.Mutable
+>#endif
 
 Consult the <https://github.com/liyang/vector-th-unbox/blob/master/tests/sanity.hs sanity test>
 for a working example.
