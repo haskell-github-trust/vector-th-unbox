@@ -11,7 +11,7 @@
 
 {-|
 Module:      Data.Vector.Unboxed.Deriving
-Copyright:   © 2012−2013 Liyang HU
+Copyright:   © 2012−2014 Liyang HU
 License:     BSD3
 Maintainer:  vector-th-unbox@liyang.hu
 Stability:   experimental
@@ -34,7 +34,7 @@ probably the @FlexibleInstances@ @LANGUAGE@ extensions. Note that GHC 7.4
 (but not earlier nor later) needs the 'G.Vector' and 'M.MVector' class
 method names to be in scope in order to define the appropriate instances:
 
->#if __GLASGOW_HASKELL == 704
+>#if __GLASGOW_HASKELL__ == 704
 >import qualified Data.Vector.Generic
 >import qualified Data.Vector.Generic.Mutable
 >#endif
@@ -76,7 +76,11 @@ common name = do
 
 -- Turn any 'Name' into a capturable one.
 capture :: Name -> Name
+#if __GLASGOW_HASKELL__ == 704
 capture = mkName . nameBase
+#else
+capture = id
+#endif
 
 liftE :: Exp -> Exp -> Exp
 liftE e = InfixE (Just e) (VarE 'liftM) . Just

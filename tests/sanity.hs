@@ -4,16 +4,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnicodeSyntax #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-#if defined(__GLASGOW_HASKELL__) && __GLASGOW_HASKELL__ < 706
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
-#endif
 
 module Main (main) where
 
 import Prelude
 import Data.Default
+#if __GLASGOW_HASKELL__ == 704
 import qualified Data.Vector.Generic
 import qualified Data.Vector.Generic.Mutable
+#endif
 import Data.Vector.Unboxed.Base (Unbox)
 import Data.Vector.Unboxed.Deriving
 
