@@ -9,6 +9,8 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS -Wall #-}
 
+#pragma push_macro("__GLASGOW_HASKELL__")
+#undef __GLASGOW_HASKELL__
 {-|
 Module:      Data.Vector.Unboxed.Deriving
 Copyright:   © 2012−2014 Liyang HU
@@ -42,6 +44,7 @@ method names to be in scope in order to define the appropriate instances:
 Consult the <https://github.com/liyang/vector-th-unbox/blob/master/tests/sanity.hs sanity test>
 for a working example.
 -}
+#pragma pop_macro("__GLASGOW_HASKELL__")
 
 module Data.Vector.Unboxed.Deriving (derivingUnbox) where
 
