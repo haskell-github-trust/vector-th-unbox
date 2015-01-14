@@ -87,7 +87,7 @@ additional <http://hackage.haskell.org/package/data-default/docs/Data-Default.ht
 constraint. Thus:
 
 >derivingUnbox "Maybe"
->    [t| (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
+>    [t| ∀ a. (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
 >    [| maybe (False, def) (\ x → (True, x)) |]
 >    [| \ (b, x) → if b then Just x else Nothing |]
 -}
@@ -155,7 +155,7 @@ from the @vector@ package represents @Complex a@ as pairs @(a, a)@. Using
 'derivingUnbox', we can define the same instances much more succinctly:
 
 >derivingUnbox "Complex"
->    [t| (Unbox a) ⇒ Complex a → (a, a) |]
+>    [t| ∀ a. (Unbox a) ⇒ Complex a → (a, a) |]
 >    [| \ (r :+ i) → (r, i) |]
 >    [| \ (r, i) → r :+ i |]
 

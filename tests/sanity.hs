@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UnicodeSyntax #-}
@@ -17,7 +18,7 @@ import Data.Vector.Unboxed.Base (Unbox)
 import Data.Vector.Unboxed.Deriving
 
 derivingUnbox "Maybe"
-    [t| (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
+    [t| ∀ a. (Default a, Unbox a) ⇒ Maybe a → (Bool, a) |]
     [| maybe (False, def) (\ x → (True, x)) |]
     [| \ (b, x) → if b then Just x else Nothing |]
 
