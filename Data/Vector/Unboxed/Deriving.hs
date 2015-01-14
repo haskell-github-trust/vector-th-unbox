@@ -26,13 +26,11 @@ module Data.Vector.Unboxed.Deriving
 import Control.Arrow
 import Control.Applicative
 import Control.Monad
+import Data.Char (isAlphaNum)
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Generic.Mutable as M
 import Data.Vector.Unboxed.Base (MVector (..), Vector (..), Unbox)
 import Language.Haskell.TH
-
-consUnbox :: String -> (Name, Name)
-consUnbox name = (mkName $ "MV_" ++ name, mkName $ "V_" ++ name)
 
 -- Create a @Pat@ bound to the given name and an @Exp@ for said binding.
 newPatExp :: String -> Q (Pat, Exp)
@@ -44,7 +42,10 @@ data Common = Common
 
 common :: String -> Q Common
 common name = do
-    let (mvName, vName) = consUnbox name
+    -- A bit looser than “Haskell 2010: §2.4 Identifiers and Operators”…
+    unless (all (\ c -> c == '\'' || c == '#' || isAlphaNum c) name) $ do
+        fail (show name ++ " is not a valid constructor suffix!")
+    let (mvName, vName) = (mkName $ "MV_" ++ name, mkName $ "V_" ++ name)
     i <- newPatExp "idx"
     n <- newPatExp "len"
     mv  <- first (ConP mvName . (:[])) <$> newPatExp "mvec"
