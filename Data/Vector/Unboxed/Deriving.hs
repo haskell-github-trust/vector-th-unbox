@@ -16,34 +16,12 @@ License:     BSD3
 Maintainer:  vector-th-unbox@liyang.hu
 Stability:   experimental
 Portability: non-portable
-
-Writing @Unbox@ instances for new data types is tedious and formulaic. More
-often than not, there is a straightforward mapping of the new type onto some
-existing one already imbued with an @Unbox@ instance. The
-<http://hackage.haskell.org/package/vector/docs/Data-Vector-Unboxed.html example>
-from the @vector@ package represents @Complex a@ as pairs @(a, a)@. Using
-'derivingUnbox', we can define the same instances much more succinctly:
-
->derivingUnbox "Complex"
->    [t| (Unbox a) ⇒ Complex a → (a, a) |]
->    [| \ (r :+ i) → (r, i) |]
->    [| \ (r, i) → r :+ i |]
-
-Requires the @MultiParamTypeClasses@, @TemplateHaskell@, @TypeFamilies@ and
-probably the @FlexibleInstances@ @LANGUAGE@ extensions. Note that GHC 7.4
-(but not earlier nor later) needs the 'G.Vector' and 'M.MVector' class
-method names to be in scope in order to define the appropriate instances:
-
->#if __GLASGOW_HASKELL__ == 704
->import qualified Data.Vector.Generic
->import qualified Data.Vector.Generic.Mutable
->#endif
-
-Consult the <https://github.com/liyang/vector-th-unbox/blob/master/tests/sanity.hs sanity test>
-for a working example.
 -}
 
-module Data.Vector.Unboxed.Deriving (derivingUnbox) where
+module Data.Vector.Unboxed.Deriving
+    ( -- $usage
+      derivingUnbox
+    ) where
 
 import Control.Arrow
 import Control.Applicative
@@ -164,4 +142,34 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
     return [ InstanceD cxts (ConT ''Unbox `AppT` typ) []
         , newtypeMVector, instanceMVector
         , newtypeVector, instanceVector ]
+
+#undef __GLASGOW_HASKELL__
+{-$usage
+
+Writing @Unbox@ instances for new data types is tedious and formulaic. More
+often than not, there is a straightforward mapping of the new type onto some
+existing one already imbued with an @Unbox@ instance. The
+<http://hackage.haskell.org/package/vector/docs/Data-Vector-Unboxed.html example>
+from the @vector@ package represents @Complex a@ as pairs @(a, a)@. Using
+'derivingUnbox', we can define the same instances much more succinctly:
+
+>derivingUnbox "Complex"
+>    [t| (Unbox a) ⇒ Complex a → (a, a) |]
+>    [| \ (r :+ i) → (r, i) |]
+>    [| \ (r, i) → r :+ i |]
+
+Requires the @MultiParamTypeClasses@, @TemplateHaskell@, @TypeFamilies@ and
+probably the @FlexibleInstances@ @LANGUAGE@ extensions. Note that GHC 7.4
+(but not earlier nor later) needs the 'G.Vector' and 'M.MVector' class
+method names to be in scope in order to define the appropriate instances:
+
+>#if __GLASGOW_HASKELL__ == 704
+>import qualified Data.Vector.Generic
+>import qualified Data.Vector.Generic.Mutable
+>#endif
+
+Consult the <https://github.com/liyang/vector-th-unbox/blob/master/tests/sanity.hs sanity test>
+for a working example.
+
+-}
 
