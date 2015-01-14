@@ -43,9 +43,11 @@ data Common = Common
 common :: String -> Q Common
 common name = do
     -- A bit looser than “Haskell 2010: §2.4 Identifiers and Operators”…
-    unless (all (\ c -> c == '\'' || c == '#' || isAlphaNum c) name) $ do
+    let valid c = c == '_' || c == '\'' || c == '#' || isAlphaNum c
+    unless (all valid name) $ do
         fail (show name ++ " is not a valid constructor suffix!")
-    let (mvName, vName) = (mkName $ "MV_" ++ name, mkName $ "V_" ++ name)
+    let mvName = mkName ("MV_" ++ name)
+    let vName = mkName ("V_" ++ name)
     i <- newPatExp "idx"
     n <- newPatExp "len"
     mv  <- first (ConP mvName . (:[])) <$> newPatExp "mvec"
