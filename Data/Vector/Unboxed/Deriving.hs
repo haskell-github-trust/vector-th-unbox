@@ -23,8 +23,10 @@ module Data.Vector.Unboxed.Deriving
       derivingUnbox
     ) where
 
-import Control.Arrow
+#if !MIN_VERSION_base(4,8,0)
 import Control.Applicative
+#endif
+import Control.Arrow
 import Control.Monad
 import Data.Char (isAlphaNum)
 import qualified Data.Vector.Generic as G
