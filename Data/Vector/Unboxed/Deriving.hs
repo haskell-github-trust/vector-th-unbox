@@ -24,13 +24,16 @@ module Data.Vector.Unboxed.Deriving
     ) where
 
 import Control.Arrow
-import Control.Applicative
 import Control.Monad
 import Data.Char (isAlphaNum)
 import qualified Data.Vector.Generic as G
 import qualified Data.Vector.Generic.Mutable as M
 import Data.Vector.Unboxed.Base (MVector (..), Vector (..), Unbox)
 import Language.Haskell.TH
+
+#if !MIN_VERSION_base(4,8,0)
+import Control.Applicative
+#endif
 
 -- Create a @Pat@ bound to the given name and an @Exp@ for said binding.
 newPatExp :: String -> Q (Pat, Exp)
