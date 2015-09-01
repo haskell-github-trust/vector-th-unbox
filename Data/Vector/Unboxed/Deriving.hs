@@ -120,6 +120,9 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'M.basicUnsafeSlice      [i, n, mv]  (AppE mvCon)
             , wrap 'M.basicOverlaps         [mv, mv']   id
             , wrap 'M.basicUnsafeNew        [n]         (liftE mvCon)
+#if MIN_VERSION_vector(0,11,0)
+            , wrap 'M.basicInitialize       [mv]        id
+#endif
             , wrap 'M.basicUnsafeReplicate  [n, a]      (liftE mvCon)
             , wrap 'M.basicUnsafeRead       [mv, i]     (liftE fromRep)
             , wrap 'M.basicUnsafeWrite      [mv, i, a]  id
