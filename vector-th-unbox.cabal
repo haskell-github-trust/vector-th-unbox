@@ -1,5 +1,5 @@
 name:           vector-th-unbox
-version:        0.2.1.3
+version:        0.2.1.4
 synopsis:       Deriver for Data.Vector.Unboxed using Template Haskell
 description:
     A Template Haskell deriver for unboxed vectors, given a pair of coercion
