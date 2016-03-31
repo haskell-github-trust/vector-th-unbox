@@ -1,0 +1,7 @@
+#! /bin/bash
+set -x
+
+declare -a FLAGS=(-fWerror --enable-tests)
+cabal configure "${FLAGS[@]}" "$@" \
+	|| cabal install --only-dependencies "${FLAGS[@]}" "$@"
+
