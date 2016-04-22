@@ -120,14 +120,16 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
 #if MIN_VERSION_template_haskell(2,11,0)
     let lazy = Bang NoSourceUnpackedness NoSourceStrictness
 # define MAYBE_KIND Nothing
+# define MAYBE_OVERLAP Nothing
 #else
     let lazy = NotStrict
 # define MAYBE_KIND
+# define MAYBE_OVERLAP
 #endif
     let newtypeMVector = NewtypeInstD [] ''MVector [s, typ] MAYBE_KIND
             (NormalC mvName [(lazy, ConT ''MVector `AppT` s `AppT` rep)]) []
     let mvCon = ConE mvName
-    let instanceMVector = InstanceD cxts
+    let instanceMVector = InstanceD MAYBE_OVERLAP cxts
             (ConT ''M.MVector `AppT` ConT ''MVector `AppT` typ) $ concat
             [ wrap 'M.basicLength           [mv]        id
             , wrap 'M.basicUnsafeSlice      [i, n, mv]  (AppE mvCon)
@@ -148,7 +150,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
     let newtypeVector = NewtypeInstD [] ''Vector [typ] MAYBE_KIND
             (NormalC vName [(lazy, ConT ''Vector `AppT` rep)]) []
     let vCon  = ConE vName
-    let instanceVector = InstanceD cxts
+    let instanceVector = InstanceD MAYBE_OVERLAP cxts
             (ConT ''G.Vector `AppT` ConT ''Vector `AppT` typ) $ concat
             [ wrap 'G.basicUnsafeFreeze     [mv]        (liftE vCon)
             , wrap 'G.basicUnsafeThaw       [v]         (liftE mvCon)
@@ -158,7 +160,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'G.basicUnsafeCopy       [mv, v]     id
             , wrap 'G.elemseq               [v, a]      id ]
 
-    return [ InstanceD cxts (ConT ''Unbox `AppT` typ) []
+    return [ InstanceD MAYBE_OVERLAP cxts (ConT ''Unbox `AppT` typ) []
         , newtypeMVector, instanceMVector
         , newtypeVector, instanceVector ]
 
