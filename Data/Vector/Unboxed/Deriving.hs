@@ -116,7 +116,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
         ArrowT `AppT` typ `AppT` rep -> return ([], typ, rep)
         _ -> fail "Expecting a type of the form: cxts => typ -> rep"
 
-    s <- VarT <$> newName "s"
+    let s = VarT (mkName "s")
 #if MIN_VERSION_template_haskell(2,11,0)
     let bang = Bang NoSourceUnpackedness NoSourceStrictness
 # define MAYBE_KIND Nothing
