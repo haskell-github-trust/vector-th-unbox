@@ -118,14 +118,14 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
 
     let s = VarT (mkName "s")
 #if MIN_VERSION_template_haskell(2,11,0)
-    let bang = Bang NoSourceUnpackedness NoSourceStrictness
+    let lazy = Bang NoSourceUnpackedness NoSourceStrictness
 # define MAYBE_KIND Nothing
 #else
-    let bang = NotStrict
+    let lazy = NotStrict
 # define MAYBE_KIND
 #endif
     let newtypeMVector = NewtypeInstD [] ''MVector [s, typ] MAYBE_KIND
-            (NormalC mvName [(bang, ConT ''MVector `AppT` s `AppT` rep)]) []
+            (NormalC mvName [(lazy, ConT ''MVector `AppT` s `AppT` rep)]) []
     let mvCon = ConE mvName
     let instanceMVector = InstanceD cxts
             (ConT ''M.MVector `AppT` ConT ''MVector `AppT` typ) $ concat
@@ -146,7 +146,7 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'M.basicUnsafeGrow       [mv, n]     (liftE mvCon) ]
 
     let newtypeVector = NewtypeInstD [] ''Vector [typ] MAYBE_KIND
-            (NormalC vName [(bang, ConT ''Vector `AppT` rep)]) []
+            (NormalC vName [(lazy, ConT ''Vector `AppT` rep)]) []
     let vCon  = ConE vName
     let instanceVector = InstanceD cxts
             (ConT ''G.Vector `AppT` ConT ''Vector `AppT` typ) $ concat
