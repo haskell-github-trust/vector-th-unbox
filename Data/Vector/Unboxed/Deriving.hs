@@ -13,6 +13,8 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS -Wall #-}
 
+#pragma push_macro("__GLASGOW_HASKELL__")
+#undef __GLASGOW_HASKELL__
 {-|
 Module:      Data.Vector.Unboxed.Deriving
 Copyright:   © 2012−2015 Liyang HU
@@ -21,6 +23,7 @@ Maintainer:  vector-th-unbox@liyang.hu
 Stability:   experimental
 Portability: non-portable
 -}
+#pragma pop_macro("__GLASGOW_HASKELL__")
 
 module Data.Vector.Unboxed.Deriving
     ( -- $usage
