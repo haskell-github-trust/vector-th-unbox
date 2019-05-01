@@ -126,7 +126,11 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
 # define MAYBE_KIND
 # define MAYBE_OVERLAP
 #endif
+#if MIN_VERSION_template_haskell(2,15,0)
+    let newtypeMVector = NewtypeInstD [] Nothing (ConT ''MVector `AppT` s `AppT` typ) MAYBE_KIND
+#else
     let newtypeMVector = NewtypeInstD [] ''MVector [s, typ] MAYBE_KIND
+#endif
             (NormalC mvName [(lazy, ConT ''MVector `AppT` s `AppT` rep)]) []
     let mvCon = ConE mvName
     let instanceMVector = InstanceD MAYBE_OVERLAP cxts
@@ -147,8 +151,13 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'M.basicUnsafeMove       [mv, mv']   id
             , wrap 'M.basicUnsafeGrow       [mv, n]     (liftE mvCon) ]
 
+#if MIN_VERSION_template_haskell(2,15,0)
+    let newtypeVector = NewtypeInstD [] Nothing (ConT ''Vector `AppT` typ) MAYBE_KIND
+            (NormalC vName [(lazy, ConT ''Vector `AppT` rep)]) []
+#else
     let newtypeVector = NewtypeInstD [] ''Vector [typ] MAYBE_KIND
             (NormalC vName [(lazy, ConT ''Vector `AppT` rep)]) []
+#endif
     let vCon  = ConE vName
     let instanceVector = InstanceD MAYBE_OVERLAP cxts
             (ConT ''G.Vector `AppT` ConT ''Vector `AppT` typ) $ concat
@@ -193,4 +202,3 @@ Consult the <https://github.com/liyang/vector-th-unbox/blob/master/tests/sanity.
 for a working example.
 
 -}
-
