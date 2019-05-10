@@ -1,11 +1,7 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
-#if __GLASGOW_HASKELL__ >= 800
-{-# LANGUAGE TemplateHaskellQuotes #-}
-#else
 {-# LANGUAGE TemplateHaskell #-}
-#endif
 #if __GLASGOW_HASKELL__ >= 702
 {-# LANGUAGE Trustworthy #-}
 #endif
@@ -126,8 +122,15 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
 # define MAYBE_KIND
 # define MAYBE_OVERLAP
 #endif
-    let newtypeMVector = NewtypeInstD [] ''MVector [s, typ] MAYBE_KIND
+#if MIN_VERSION_template_haskell(2,15,0)
+    newtypeMVector <- do
+        tmp <- [t|MVector $(return s) $(return typ)|]
+        return $ NewtypeInstD [] Nothing tmp MAYBE_KIND
             (NormalC mvName [(lazy, ConT ''MVector `AppT` s `AppT` rep)]) []
+#else
+    let newtypeMVector = NewtypeInstD [] ''MVector [s, typ] MAYBE_KIND []
+            (NormalC mvName [(lazy, ConT ''MVector `AppT` s `AppT` rep)]) []
+#endif
     let mvCon = ConE mvName
     let instanceMVector = InstanceD MAYBE_OVERLAP cxts
             (ConT ''M.MVector `AppT` ConT ''MVector `AppT` typ) $ concat
@@ -147,8 +150,15 @@ derivingUnbox name argsQ toRepQ fromRepQ = do
             , wrap 'M.basicUnsafeMove       [mv, mv']   id
             , wrap 'M.basicUnsafeGrow       [mv, n]     (liftE mvCon) ]
 
+#if MIN_VERSION_template_haskell(2,15,0)
+    newtypeVector <- do
+        tmp <- [t|Vector $(return typ)|]
+        return $ NewtypeInstD [] Nothing tmp MAYBE_KIND
+            (NormalC vName [(lazy, ConT ''Vector `AppT` rep)]) []
+#else
     let newtypeVector = NewtypeInstD [] ''Vector [typ] MAYBE_KIND
             (NormalC vName [(lazy, ConT ''Vector `AppT` rep)]) []
+#endif
     let vCon  = ConE vName
     let instanceVector = InstanceD MAYBE_OVERLAP cxts
             (ConT ''G.Vector `AppT` ConT ''Vector `AppT` typ) $ concat
