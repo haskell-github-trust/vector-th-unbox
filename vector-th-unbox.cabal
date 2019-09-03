@@ -9,7 +9,7 @@ description:
 stability:      experimental
 license:        BSD3
 license-file:   LICENSE
-copyright:      © 2012−2015 Liyang HU
+copyright:      (c) 2012-2015 Liyang HU
 author:         Liyang HU <vector-th-unbox@liyang.hu>
 maintainer:     Liyang HU <vector-th-unbox@liyang.hu>
 category:       Data
